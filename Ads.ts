@@ -451,11 +451,11 @@ if (typeof window['adCommands'] !== "undefined") {
             ads.enableLogging();
         }
     }
-    adCommands.forEach((command) => { command(ads); });
+    adCommands.forEach((command: Function) => { command(ads); });
     Object.defineProperty(adCommands, "push", {
         enumerable: false, // hide from for...in
         configurable: false, // prevent further meddling...
         writable: false, // see above ^
-        value: (command) => { command(ads);return this.length; }
+        value: (command: Function) => { command(ads);return this.length; }
     });
 }
