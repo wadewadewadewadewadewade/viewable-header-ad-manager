@@ -1,0 +1,31 @@
+{
+  "name": "viewable-header-ad-manager",
+  "version": "1.0.0",
+  "description": "A tool to controll the loading and refreshing of viewable ads implementing Prebid and A9 header bidding, client-side",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx eslint Ads.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wadewadewadewadewadewade/viewable-header-ad-manager.git"
+  },
+  "keywords": [
+    "Header-bidder",
+    "Prebid",
+    "A9",
+    "Viewable",
+    "Ads"
+  ],
+  "author": "Wade McDaniel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wadewadewadewadewadewade/viewable-header-ad-manager/issues"
+  },
+  "homepage": "https://github.com/wadewadewadewadewadewade/viewable-header-ad-manager#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^3.0.2",
+    "@typescript-eslint/parser": "^3.0.2",
+    "eslint": "^7.1.0"
+  }
+}
