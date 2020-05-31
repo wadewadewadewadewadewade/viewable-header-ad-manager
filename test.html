@@ -11,8 +11,6 @@
   <link rel="dns-prefetch" href="https://ap.lijit.com" />
   <link rel="dns-prefetch" href="https://cdn.ampproject.org" />
   <link rel="dns-prefetch" href="https://aax-eu.amazon-adsystem.com" />
-  <!--script async="async" src="https://c.amazon-adsystem.com/aax2/apstag.js"></script>
-  <script async="async" src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script-->
   <script>
     var adCommands = [];
     adCommands.push(
@@ -79,7 +77,12 @@
         setTimeout(gtmEventSend,250);
       }
     }</script>
-  <script id="ad_controller_library" async="async" data-main="ads.js?cb=1" src="https://requirejs.org/docs/release/2.3.6/minified/require.js" onerror="gtmEventSend()"></script>
+  <script type="module">
+    import {loadModule} from 'https://klesun.github.io/ts-browser/src/ts-browser.js';
+    loadModule('./Ads.ts').then(indexModule => {
+        return indexModule.default(document.getElementById('composeCont'));
+    });
+  </script>
   <style>
     .force-height { height:200vh; }
   </style>
