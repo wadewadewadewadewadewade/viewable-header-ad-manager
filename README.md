@@ -12,5 +12,6 @@ Viewablity Threshold: https://developer.mozilla.org/en-US/docs/Web/API/Intersect
 # Building
 `tsc --module amd --outFile src/ads.js Ads.ts`
 `open src/test.html`
+`python -m SimpleHTTPServer`
 
 https://github.com/klesun/ts-browser
