@@ -80,11 +80,10 @@ export class AdUnit {
             const googletag: GoogleJS = window['googletag'];
             googletag.cmd.push(function () {
                 googletag.destroySlots(this.dfp);
-                callback(this.code);
+                if (callback) callback(this.code);
             })
         }
         this.enabled = false;
-        callback(this.code);
     }
     enable(callback?: Function) {
         if (window['googletag']) {
@@ -94,7 +93,7 @@ export class AdUnit {
             });
         }
         this.enabled = true;
-        callback(this.code);
+        if (callback) callback(this.code);
     }
     elegableForDraw(nobids: Boolean = false) {
         if (!this.enabled) {
@@ -125,8 +124,8 @@ export class AdUnit {
             }
             //this.dfp.setTargeting("ad_refresh", "true"); TODO: wire this in
             googletag.cmd.push(() => { 
-                callback(eventObject);
                 googletag.pubads().refresh([this.dfp]);
+                if (callback) callback(eventObject);
             });
         } else {
             initalDFPCheckTimeout = setTimeout(function() { this.draw(fromViewableEvent, callback); }, 100);
@@ -145,7 +144,7 @@ export class AdUnit {
                 bidsBackHandler: (bids: object, timedOut: Boolean) => {
                     pbjs.setTargetingForGPTAsync(this.code);
                     this.bidsReturned.prebid = true;
-                    callback(eventObject);
+                    if (callback) callback(eventObject);
                     if (this.bidsReturned.a9) {
                         this.status = Status.READYTODRAW;
                         if (this.elegableForDraw()) {
@@ -165,7 +164,7 @@ export class AdUnit {
             }, (bids: object) => {
                 apstag.setDisplayBids();
                 this.bidsReturned.a9 = true;
-                callback(eventObject);
+                if (callback) callback(eventObject);
                 if (this.bidsReturned.prebid) {
                     this.status = Status.READYTODRAW;
                     if (this.elegableForDraw()) {
