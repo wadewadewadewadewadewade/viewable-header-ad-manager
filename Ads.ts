@@ -1,5 +1,4 @@
-import { AdUnits, PrebidUnit, A9Unit, GoogleUnit, PrebidJS, A9JS, GoogleJS, Settings, EventObject, Libraries, Status } from './Interfaces';
-import { AdUnit } from './AdUnit';
+import { AdUnits, AdUnit, PrebidUnit, GoogleUnit, PrebidJS, A9JS, GoogleJS, Settings, EventObject, Status } from './Internal';
 
 window['SMARTSYNC'] = true; // Legacy Prebid behavior, and perhaps not relavant anymore
 const googletag = window['googletag'] || {};
@@ -11,7 +10,7 @@ export class Ads {
     referencesLoaded: number = 0;
     unitsReady: Boolean = false;
     loggingPattern = new RegExp('/enableadlogging=(true|report)/');
-    logging: Boolean = window.location.href.match(this.loggingPattern).length > 0;
+    logging: Boolean = window.location.href.match(this.loggingPattern) !== null;
     units: AdUnits = {};
     prebid: Array<PrebidUnit> = [];
     documentVisible = !document.hidden;
@@ -118,7 +117,7 @@ export class Ads {
         const smallSizes = [[320,50],[300,250],[320,100]];
         const allSizes = [].concat(largeSizes).concat(mediumSizes).concat(smallSizes);
         this.prebid = prebidUnits;
-        this.prebid.forEach((unit: PrebidUnit) => this.units[unit.code] = new AdUnit(unit.code, unit, this));
+        this.prebid.forEach((unit: PrebidUnit) => { this.units[unit.code] = new AdUnit(unit.code, unit, this) });
         const scriptCallback = (src: string) => {
             this.referencesLoaded++;
             if (this.logging) {

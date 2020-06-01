@@ -1,4 +1,5 @@
-import { AdUnit } from './AdUnit'
+import { AdUnit } from './Internal';
+
 export enum Status {
     UNDEFINED, // never loaded or finished rendering
     FETCHING, // fetching bids

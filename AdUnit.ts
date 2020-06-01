@@ -1,5 +1,4 @@
-import { Ads } from './Ads';
-import { Status, PrebidUnit, A9Unit, GoogleUnit, PrebidJS, A9JS, GoogleJS, EventObject, Settings } from './Interfaces'
+import { Ads, Status, PrebidUnit, A9Unit, GoogleUnit, PrebidJS, A9JS, GoogleJS, EventObject } from './Internal'
 
 export class AdUnit {
     loaded = new Date();
