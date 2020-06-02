@@ -79,8 +79,13 @@
         retries++;
         setTimeout(gtmEventSend,250);
       }
-    }</script>
-  <script id="ad_controller_library" async="async" data-main="ads.js?cb=1" src="https://requirejs.org/docs/release/2.3.6/minified/require.js" onerror="gtmEventSend()"></script>
+    }
+  </script>
+  <script async="async" src="https://requirejs.org/docs/release/2.3.6/minified/require.js"></script>
+  <script async="async" src="Internal.js" onerror="gtmEventSend()"></script>
+  <script async="async" src="Interfaces.js" onerror="gtmEventSend()"></script>
+  <script async="async" src="AdUnit.js" onerror="gtmEventSend()"></script>
+  <script async="async" src="Ads.js" onerror="gtmEventSend()"></script>
   <style>
     .force-height { height:200vh; }
   </style>

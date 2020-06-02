@@ -13,7 +13,8 @@ export enum Libraries {
     DFP
 }
 export interface ViewableSettings {
-    threshold: number,
+    rootMargin: string,
+    threshold: Array<number>,
     callback: Function
 }
 export interface PrebidJS {

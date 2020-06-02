@@ -80,9 +80,9 @@
     }</script>
   <script type="module">
     import {loadModule} from 'https://klesun.github.io/ts-browser/src/ts-browser.js';
-    loadModule('./Ads.ts').then(indexModule => {
+    loadModule('./src/ads.js')/*.then(indexModule => {
         return indexModule.default(document.getElementById('composeCont'));
-    });
+    })*/;
   </script>
   <style>
     .force-height { height:200vh; }

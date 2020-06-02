@@ -1,5 +1,16 @@
 import { AdUnits, AdUnit, PrebidUnit, GoogleUnit, PrebidJS, A9JS, GoogleJS, Settings, EventObject, Status } from './Internal';
 
+declare global {
+    interface Window { 
+        SMARTSYNC: Boolean;
+        googletag: any;
+        pbjs: any;
+        apstag: any;
+        ads: Ads;
+        adCommands: any;
+    }
+}
+
 window['SMARTSYNC'] = true; // Legacy Prebid behavior, and perhaps not relavant anymore
 const googletag = window['googletag'] || {};
 
@@ -15,7 +26,24 @@ export class Ads {
     prebid: Array<PrebidUnit> = [];
     documentVisible = !document.hidden;
     lastInteraction = new Date();
-    settings: Settings;
+    settings: Settings = {
+        dfpUnitIdBase: '/12345/ad-unit-parent/',
+        a9Id: 'a9-guid',
+        timeout: 1500,
+        viewability: {
+            rootMargin: Math.floor(window.innerHeight * 2 / 3) + 'px 0px',
+            threshold: [0, 0.5],
+            callback: (eventObject: EventObject) => this.dispatchEvent('viewable', eventObject)
+        },
+        interactionThreshold: 60 * 1000,
+        retries: {
+            wait: 31000,
+            viewability: { // retry loading the unit on empty
+                wait: 5000,
+                limit: 3
+            }
+        }
+    }
 
     constructor() {}
 
@@ -41,11 +69,12 @@ export class Ads {
     enable(units: Array<string>) {
         if (units) {
             units.forEach((code: string) => {
-                this.units[code].enable(code => {
+                this.units[code].enable((code: string) => {
                     if (this.logging) {
                         console.log("adsdebug enable", code, (new Date()).getTime() - this.loaded.getTime());
                     }
-                    this.dispatchEvent('adrendered', code); // trigger draw
+                    const eventObject: EventObject = { detail: { code }};
+                    this.dispatchEvent('adrendered', eventObject); // trigger draw
                 });
             });
         } else {
@@ -89,21 +118,7 @@ export class Ads {
         }
     }
     initialize(prebidUnits: Array<PrebidUnit>, settings: Settings) {
-        this.settings = {
-            timeout: 1500,
-            viewability: {
-                rootMargin: Math.floor(window.innerHeight * 2 / 3) + 'px 0px',
-                threshold: [0, 0.5],
-                callback: (eventObject: EventObject) => this.dispatchEvent('viewable', eventObject)
-            },
-            interactionThreshold: 60 * 1000,
-            retries: {
-                wait: 31000,
-                viewability: { // retry loading the unit on empty
-                    wait: 5000,
-                    limit: 3
-                }
-            }, ...settings} // override with your settings
+        this.settings = {...this.settings, ...settings} // override with your settings
         if (typeof window['googletag'] === 'undefined') window['googletag'] = {}; // set up googletag
         const googletag: GoogleJS = window['googletag'];
         googletag.cmd = googletag.cmd || [];
@@ -115,7 +130,7 @@ export class Ads {
         const largeSizes = [[728,90],[300,600],[300,250],[970,90],[970,250]];
         const mediumSizes = [[728,90],[300,600],[300,250],[320,100]];
         const smallSizes = [[320,50],[300,250],[320,100]];
-        const allSizes = [].concat(largeSizes).concat(mediumSizes).concat(smallSizes);
+        //const allSizes: Array<Array<number>> = [].concat(largeSizes).concat(mediumSizes).concat(smallSizes);
         this.prebid = prebidUnits;
         this.prebid.forEach((unit: PrebidUnit) => { this.units[unit.code] = new AdUnit(unit.code, unit, this) });
         const scriptCallback = (src: string) => {
@@ -183,12 +198,12 @@ export class Ads {
                     googletag.pubads().disableInitialLoad();
                     googletag.pubads().addEventListener('slotRenderEnded', (e: GoogleUnit) => {
                         const code = e.slot.getSlotElementId(),
-                            adContainer = <HTMLDivElement>document.getElementById(code).parentNode;
+                            adElement = <HTMLDivElement>document.getElementById(code);
                         this.units[code].empty = e.isEmpty;
                         if (e.isEmpty) {
-                            adContainer.classList.add("empty");
+                            adElement && adElement.parentElement && adElement.parentElement.classList.add("empty");
                         } else {
-                            adContainer.classList.remove("empty");
+                            adElement && adElement.parentElement && adElement.parentElement.classList.remove("empty");
                         }
                         const eventObject: EventObject = { detail: { code, isEmpty: e.isEmpty }};
                         this.dispatchEvent('adrendered', eventObject);
@@ -271,12 +286,14 @@ export class Ads {
                 }
             }
         }
-        let hidden: string, state: string, visibilityChange: string = null;
+        let hidden: string = "hidden",
+            state: string = "visibilityState",
+            visibilityChange: string = "visibilitychange";
         if (typeof document.hidden !== "undefined") {
             hidden = "hidden";
             visibilityChange = "visibilitychange";
             state = "visibilityState";
-        } else if (typeof document['mozHidden'] !== "undefined") {
+        }/* else if (typeof document['mozHidden'] !== "undefined") {
             hidden = "mozHidden";
             visibilityChange = "mozvisibilitychange";
             state = "mozVisibilityState";
@@ -288,10 +305,10 @@ export class Ads {
             hidden = "webkitHidden";
             visibilityChange = "webkitvisibilitychange";
             state = "webkitVisibilityState";
-        }
+        }*/
         if (visibilityChange) {
             document.addEventListener(visibilityChange, () => {
-                if (document[hidden]) {
+                if (document.hidden) {
                     this.documentVisible = false;
                 } else {
                     this.documentVisible = true;
@@ -300,27 +317,29 @@ export class Ads {
                 this.lastInteraction = new Date();
             }, false);
         }
-        window.addEventListener("scroll", (e: CustomEvent) => {
+        window.addEventListener("scroll", (e: Event) => {
             this.lastInteraction = new Date();
             checkAllUnits();
         });
-        document.addEventListener("mousemove", (e: CustomEvent) => {
+        document.addEventListener("mousemove", (e: Event) => {
             this.lastInteraction = new Date();
             checkAllUnits();
         });
-        window.addEventListener("resize", (e: CustomEvent) => {
+        window.addEventListener("resize", (e: Event) => {
             this.lastInteraction = new Date();
             checkAllUnits();
         });
-        document.addEventListener("library", (e: CustomEvent) => {
-            if (e.detail) {
+        document.addEventListener("library", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            if (ce.detail) {
                 if (this.unitsReady && this.referencesLoaded > 2) { // everything is ready
                     // do stuff here if necessary after everything is loaded
                 }
             }
         });
-        document.addEventListener("bidsrecieved", (e: CustomEvent) => {
-            const eo = <EventObject>e;
+        document.addEventListener("bidsrecieved", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            const eo = <EventObject>ce;
             if (eo.detail) {
                 if (this.units[eo.detail.code].elegableForDraw()) {
                     this.units[eo.detail.code].status = Status.READYTODRAW;
@@ -328,8 +347,9 @@ export class Ads {
                 }
             }
         });
-        document.addEventListener("timeout", (e: CustomEvent) => {
-            const eo = <EventObject>e;
+        document.addEventListener("timeout", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            const eo = <EventObject>ce;
             if (eo.detail) {
                 if (this.units[eo.detail.code].elegableForDraw(true)) {
                     this.units[eo.detail.code].status = Status.READYTODRAW;
@@ -337,8 +357,9 @@ export class Ads {
                 }
             }
         });
-        document.addEventListener("viewable", (e: CustomEvent) => {
-            const eo = <EventObject>e;
+        document.addEventListener("viewable", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            const eo = <EventObject>ce;
             if (eo.detail) {
                 if (this.units[eo.detail.code].retries.viewable < this.units[eo.detail.code].retries.limit && (this.units[eo.detail.code].status === Status.UNDEFINED || this.units[eo.detail.code].status === Status.READYTODRAW)) {
                     this.units[eo.detail.code].retries.viewable++;
@@ -350,12 +371,13 @@ export class Ads {
                 }
             }
         });
-        document.addEventListener("waitingover", (e: CustomEvent) => {
-            const eo = <EventObject>e;
+        document.addEventListener("waitingover", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            const eo = <EventObject>ce;
             if (eo.detail) {
                 if (this.units[eo.detail.code].retries.timer.long) {
                     clearTimeout(this.units[eo.detail.code].retries.timer.long);
-                    this.units[eo.detail.code].retries.timer.long = null;
+                    this.units[eo.detail.code].retries.timer.long = -1;
                 }
                 this.units[eo.detail.code].retries.viewable = 0;
                 if (this.units[eo.detail.code].status === Status.UNDEFINED) {
@@ -365,8 +387,9 @@ export class Ads {
                 }
             }
         });
-        document.addEventListener("adrendered", (e: CustomEvent) => {
-            const eo = <EventObject>e;
+        document.addEventListener("adrendered", (e: Event) => {
+            const ce: CustomEvent = e as CustomEvent;
+            const eo = <EventObject>ce;
             if (eo.detail) {
                 this.units[eo.detail.code].attempted++;
                 if (!this.units[eo.detail.code].empty) {
@@ -375,12 +398,12 @@ export class Ads {
                     this.units[eo.detail.code].retries.viewable = 0;
                     if (this.units[eo.detail.code].retries.timer.long) {
                         window.clearTimeout(this.units[eo.detail.code].retries.timer.long);   
-                        this.units[eo.detail.code].retries.timer.long = null;
+                        this.units[eo.detail.code].retries.timer.long = -1;
                     }
                 }
                 if (this.units[eo.detail.code].retries.timer.short) {
                     window.clearTimeout(this.units[eo.detail.code].retries.timer.short);   
-                    this.units[eo.detail.code].retries.timer.short = null;
+                    this.units[eo.detail.code].retries.timer.short = -1;
                 }
                 this.units[eo.detail.code].bidsReturned.a9 = false;
                 this.units[eo.detail.code].bidsReturned.prebid = false;
@@ -392,8 +415,9 @@ export class Ads {
                 if (this.units[eo.detail.code].empty && this.units[eo.detail.code].viewable) {
                     this.units[eo.detail.code].retries.timer.short = window.setTimeout(() => { this.dispatchEvent('viewable', eo); }, settings.retries.viewability.wait);
                 }
-                document.getElementById(eo.detail.code).setAttribute('data-empty', String(this.units[eo.detail.code].empty));
-                document.getElementById(eo.detail.code).setAttribute('data-retries-viewable', String(this.units[eo.detail.code].retries.viewable));
+                const el = document.getElementById(eo.detail.code);
+                el && el.setAttribute('data-empty', String(this.units[eo.detail.code].empty));
+                el && el.setAttribute('data-retries-viewable', String(this.units[eo.detail.code].retries.viewable));
             }
         });
         let erroredReferences = 0;
@@ -404,19 +428,19 @@ export class Ads {
             script.setAttribute("async", "async");
             script.onload = function() { scriptCallback("loaded " + callbackname); }
             script.onerror = function() { erroredReferences++; /*gtmEventSend();*/ }
-            ref.parentNode.insertBefore(script, ref);
+            ref && ref.parentNode && ref.parentNode.insertBefore(script, ref);
         }
         loadAndWatchScript('//c.amazon-adsystem.com/aax2/apstag.js', '/apstag.js');
         loadAndWatchScript('//acdn.adnxs.com/prebid/not-for-prod/prebid.js', '/prebid.js');
         loadAndWatchScript('//securepubads.g.doubleclick.net/tag/js/gpt.js', '/gpt.js');
     }
     enableLogging() {
-        document.addEventListener("adrendered", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug adrendered", eo.detail, (new Date()).getTime() - this.loaded.getTime(), "empty", this.units.states[eo.detail.code].empty, "retries.background", this.units.states[eo.detail.code].retries.background, "retries.viewable", this.units.states[eo.detail.code].retries.viewable); }})
-        document.addEventListener("bidsrecieved", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug bidsrecieved", eo.detail.code, (new Date()).getTime() - this.loaded.getTime(), "a9", this.units.states[eo.detail.code].bids.a9, "prebid", this.units.states[eo.detail.code].bids.prebid, "drawing", this.units.states[eo.detail.code].drawing); }});
-        document.addEventListener("waitingover", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug waitingover", eo.detail, (new Date()).getTime() - this.loaded.getTime()); }});
-        document.addEventListener("viewable", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug viewable", eo.detail, (new Date()).getTime() - this.loaded.getTime(), "empty", this.units.states[eo.detail.code].empty, "attempted", this.units.states[eo.detail.code].attempted, "retries.background", this.units.states[eo.detail.code].retries.background, "retries.viewable", this.units.states[eo.detail.code].retries.viewable); }});
-        document.addEventListener("timeout", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug timeout", eo.detail.code, (new Date()).getTime() - this.loaded.getTime(), eo.detail.fromViewableEvent); }});
-        document.addEventListener("library", (e: CustomEvent) => {if (e.detail) { const eo = <EventObject>e;console.log("adsdebug library", eo.detail, (new Date()).getTime() - this.loaded.getTime()); }});
+        document.addEventListener("adrendered", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug adrendered", eo.detail, (new Date()).getTime() - this.loaded.getTime(), "empty", this.units[eo.detail.code].empty, "retries.viewable", this.units[eo.detail.code].retries.viewable); }})
+        document.addEventListener("bidsrecieved", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug bidsrecieved", eo.detail.code, (new Date()).getTime() - this.loaded.getTime(), "a9", this.units[eo.detail.code].bidsReturned.a9, "prebid", this.units[eo.detail.code].bidsReturned.prebid, "drawing", this.units[eo.detail.code].status === Status.DRAWING); }});
+        document.addEventListener("waitingover", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug waitingover", eo.detail, (new Date()).getTime() - this.loaded.getTime()); }});
+        document.addEventListener("viewable", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug viewable", eo.detail, (new Date()).getTime() - this.loaded.getTime(), "empty", this.units[eo.detail.code].empty, "attempted", this.units[eo.detail.code].attempted, "retries.viewable", this.units[eo.detail.code].retries.viewable); }});
+        document.addEventListener("timeout", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug timeout", eo.detail.code, (new Date()).getTime() - this.loaded.getTime(), eo.detail.fromViewableEvent); }});
+        document.addEventListener("library", (e: Event) => { const ce = e as CustomEvent; if (ce.detail) { const eo = <EventObject>ce;console.log("adsdebug library", eo.detail, (new Date()).getTime() - this.loaded.getTime()); }});
     }
     report() {
         let div = document.getElementById('viewableads_report');
@@ -444,7 +468,8 @@ if (typeof window['adCommands'] !== "undefined") {
     window['ads'] = window['ads'] || new Ads();
     let ads = window['ads'];
     if (ads.logging) {
-        if (window.location.href.match(ads.loggingPattern)[1] === 'report') {
+        const match = window.location.href.match(ads.loggingPattern);
+        if (match && match[1] === 'report') {
             setInterval(() => { ads.report() }, 500);
         } else {
             ads.enableLogging();
@@ -455,6 +480,6 @@ if (typeof window['adCommands'] !== "undefined") {
         enumerable: false, // hide from for...in
         configurable: false, // prevent further meddling...
         writable: false, // see above ^
-        value: (command: Function) => { command(ads);return this.length; }
+        value: (command: Function) => { command(ads);return adCommands.length; }
     });
 }

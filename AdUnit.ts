@@ -6,26 +6,26 @@ export class AdUnit {
     sizes: Array<Array<number>>;
     dfpUnitIdBase: string;
     enabled: Boolean = true;
-    timeout: number = null;
+    timeout: number | null = null;
     status = Status.UNDEFINED;
     viewable: Boolean = false;
     empty: Boolean = true;
     shown: number = 0;
     attempted: number = 0;
-    lastShown: Date = null;
+    lastShown: Date | null = null;
     bidsReturned = {
         timeout: null,
         a9: false,
         prebid: false
     };
-    prebid: PrebidUnit = null; // the adapter-specific data
-    a9: A9Unit = null;
-    dfp: GoogleUnit = null;
-    ads: Ads = null; // pointer back at the controller for lastInteraction and settings
+    prebid: PrebidUnit | null = null; // the adapter-specific data
+    a9: A9Unit | null = null;
+    dfp: GoogleUnit | null = null;
+    ads: Ads | null = null; // pointer back at the controller for lastInteraction and settings
     retries = {
         timer: {
-            long: null,
-            short: null
+            long: -1,
+            short: -1
         },
         viewable: 0,
         limit: 3
@@ -51,7 +51,7 @@ export class AdUnit {
                 entries.forEach((entry) => {
                     // Are we in viewport?
                     if (entry.isIntersecting) {
-                        if (entry.intersectionRatio > ads.settings.viewability.threshold) {
+                        if (entry.intersectionRatio > Math.max(ads.settings.viewability.threshold[0], ads.settings.viewability.threshold[1])) {
                             this.viewable = true;
                             if (this.enabled) {
                                 const eventObject: EventObject = { detail: { code: this.code, fromViewableEvent: true }};
@@ -66,7 +66,7 @@ export class AdUnit {
                     }
                 });
             }, ads.settings.viewability);
-            observer.observe(unit);
+            observer.observe(unit as Element);
         }
     }
     dispatchEvent(eventName: string, data: EventObject) {
@@ -77,7 +77,7 @@ export class AdUnit {
     disable(callback?: Function) {
         if (window['googletag']) {
             const googletag: GoogleJS = window['googletag'];
-            googletag.cmd.push(function () {
+            googletag.cmd.push(() => {
                 googletag.destroySlots(this.dfp);
                 if (callback) callback(this.code);
             })
@@ -87,7 +87,7 @@ export class AdUnit {
     enable(callback?: Function) {
         if (window['googletag']) {
             const googletag: GoogleJS = window['googletag'];
-            googletag.cmd.push(function () {
+            googletag.cmd.push(() => {
                 googletag.display(this.code);
             });
         }
@@ -100,7 +100,7 @@ export class AdUnit {
         } else if (nobids) {
             return this.viewable && !document.hidden;
         } else {
-            return this.bidsReturned.a9 && this.bidsReturned.prebid && this.viewable && (this.status === Status.UNDEFINED || this.status === Status.READYTODRAW) && !document.hidden && this.ads.lastInteraction.getTime() - this.ads.loaded.getTime() > this.ads.settings.interactionThreshold;
+            return this.bidsReturned.a9 && this.bidsReturned.prebid && this.viewable && (this.status === Status.UNDEFINED || this.status === Status.READYTODRAW) && !document.hidden && (this.ads && this.ads.lastInteraction.getTime() - this.ads.loaded.getTime() > this.ads.settings.interactionThreshold);
         }
     }
     refresh() {
@@ -108,12 +108,7 @@ export class AdUnit {
         this.fetch();
     }
     draw(fromViewableEvent?: Boolean, callback?: Function) {
-        let initalDFPCheckTimeout: number;
         if (this.status === Status.READYTODRAW && this.viewable && window['googletag']) {
-            if (initalDFPCheckTimeout) {
-                clearTimeout(initalDFPCheckTimeout);
-                initalDFPCheckTimeout = null;
-            }
             const eventObject: EventObject = { detail: { code: this.code, fromViewableEvent: fromViewableEvent }},
                 googletag: GoogleJS = window['googletag'];
             this.status = Status.DRAWING;
@@ -127,7 +122,7 @@ export class AdUnit {
                 if (callback) callback(eventObject);
             });
         } else {
-            initalDFPCheckTimeout = setTimeout(function() { this.draw(fromViewableEvent, callback); }, 100);
+            setTimeout(() => { this.draw(fromViewableEvent, callback); }, 100);
         }
     }
     fetch(fromViewableEvent?: Boolean, callback?: Function) {
