@@ -50,19 +50,19 @@
           }
         ];
         ads.initialize(adUnits, {
-          timeout: 1500, // in milliseconds
-          interactionThreshold: 60 * 1000, // in milliseconds, or false
-          dfpUnitIdBase: '/123456/ad-unit-parent/', // /{networkcode}/{string}
+          timeout: 1500, // header bidder timeout, in milliseconds
+          interactionThreshold: 60 * 1000, // user last-page-interaction, in milliseconds
+          dfpUnitIdBase: '/123456/ad-unit-parent/', // /{networkcode}/{string}/
           a9Id: 'apstag-guid', // guid from Amazon
           viewability: {
-            threshold: 0.5
+            threshold: [0, 0.5]
           },
           retries: {
-              wait: 31000, // interval between refreshes
-              viewability: { // retry loading the unit on empty
-                  wait: 5000, // interval in milliseconds between trying to reload empty unit
-                  limit: 5 // number of times to retry reloading empty unit
-              }
+            wait: 31000, // interval between refreshes
+            viewability: { // retry loading the unit on empty
+                wait: 5000, // interval in milliseconds between trying to reload empty unit
+                limit: 5 // number of times to retry reloading empty unit
+            }
           }
         });
       }
@@ -81,13 +81,15 @@
       }
     }
   </script>
-  <script async="async" src="https://requirejs.org/docs/release/2.3.6/minified/require.js"></script>
-  <script async="async" src="Internal.js" onerror="gtmEventSend()"></script>
+  <script data-main="Ads.js" src="https://requirejs.org/docs/release/2.3.6/minified/require.js"></script>
+  <!--script async="async" src="Internal.js" onerror="gtmEventSend()"></script>
   <script async="async" src="Interfaces.js" onerror="gtmEventSend()"></script>
   <script async="async" src="AdUnit.js" onerror="gtmEventSend()"></script>
-  <script async="async" src="Ads.js" onerror="gtmEventSend()"></script>
+  <script async="async" src="Ads.js" onerror="gtmEventSend()"></script-->
   <style>
     .force-height { height:200vh; }
+    [id] { border:solid 1px black; }
+    [id]:before { content:attr(id);display:block;font-size:12pt;font-weight:bold; }
   </style>
 </head>
 <body>

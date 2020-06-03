@@ -31,6 +31,7 @@ export class AdUnit {
         limit: 3
     };
     constructor(code: string, prebidUnit: PrebidUnit, ads: Ads) {
+        this.timeout = ads.settings.timeout;
         this.code = code;
         this.dfpUnitIdBase = ads.settings.dfpUnitIdBase;
         this.sizes = prebidUnit.mediaTypes.banner.sizes;
@@ -150,10 +151,10 @@ export class AdUnit {
             this.bidsReturned.prebid = false;
             pbjs.que.push(function() { pbjs.requestBids(prebidParams); });
         }
-        if (apstag) {
+        if (apstag && typeof apstag.fetchBids === 'function') {
             this.bidsReturned.a9 = false;
             apstag.fetchBids({
-                slots: this.a9,
+                slots: [this.a9],
                 timeout: this.timeout,
             }, (bids: object) => {
                 apstag.setDisplayBids();

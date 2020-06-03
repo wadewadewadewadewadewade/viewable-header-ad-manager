@@ -265,7 +265,7 @@ export class Ads {
             }
             if (src.indexOf("/apstag.js") > 0) {
                 //Initialize the Library
-                apstag.init({
+                window['apstag'].init({
                     "pubID": this.settings.a9Id,
                     "adServer": "googletag"
                 });
@@ -277,7 +277,7 @@ export class Ads {
         }
         const checkAllUnits = () => {
             for (let code in this.units) {
-                if (this.units.states.hasOwnProperty(code)) {
+                if (this.units.hasOwnProperty(code)) {
                     if (this.units[code].status === Status.UNDEFINED) {
                         this.units[code].fetch();
                     } else if (this.units[code].status === Status.READYTODRAW) {

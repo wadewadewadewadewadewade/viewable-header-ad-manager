@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx eslint Ads.ts",
-    "tsc": "tsc --module amd --outDir src"
+    "tsc": "tsc --module amd --outFile src/Ads.js"
   },
   "repository": {
     "type": "git",
